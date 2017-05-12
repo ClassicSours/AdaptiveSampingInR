@@ -1,7 +1,0 @@
-## compiled sources ##
-######################
-*.html
-
-rsconnect
-adaptivesampling_cache
-adaptivesampling_files
