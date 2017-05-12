@@ -10,6 +10,7 @@ for(p in pkgs)
   suppressPackageStartupMessages(library(p, quietly=TRUE, character.only=TRUE))
 rm('p','pkgs')
 
+## Turn a matrix into a 1d representation 
 melt.matrix <- function(world){
   suppressMessages(
     world %>% 
@@ -22,7 +23,16 @@ melt.matrix <- function(world){
       select(value,id,x,y)
   )
 }
+## Try it out:
+# melt.matrix(matrix(c(0:9),nrow=2))
+# melt.matrix(matrix(c(0:9),ncol=2))
+## Compare with 
+# rm(melt.matrix)
+# melt(matrix(c(0:9),nrow=2))
+# melt(matrix(c(0:9),ncol=2))
 
+## Given X and Y coordinate and the number of columns in the matirx 
+## return its location in a 1d vetor
 getid <- function(x,y,ncol){return(x + ((y-1) * ncol))}
 
 plotly.adjmatrix <- function(world, name){
@@ -257,6 +267,7 @@ plot(g2, layout=layout_on_grid)
 adjlist(figure10.2)
 adjlist.adaptive(figure10.2)
 
+## From https://github.com/DataWookie/liqueueR/blob/master/R/queue.R
 Queue <- setRefClass(Class = "Queue",
   fields = list(
     name = "character",

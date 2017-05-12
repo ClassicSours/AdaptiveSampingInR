@@ -20,6 +20,40 @@ output: slidy_presentation
   width: 50%;
   text-align: left;
 }
+
+/* 5 columns */
+.col-xs-15,
+.col-sm-15,
+.col-md-15,
+.col-lg-15 {
+    position: relative;
+    min-height: 1px;
+    padding-right: 10px;
+    padding-left: 10px;
+}
+
+.col-xs-15 {
+    width: 20%;
+    float: left;
+}
+@media (min-width: 768px) {
+    .col-sm-15 {
+        width: 20%;
+        float: left;
+    }
+}
+@media (min-width: 992px) {
+    .col-md-15 {
+        width: 20%;
+        float: left;
+    }
+}
+@media (min-width: 1200px) {
+    .col-lg-15 {
+        width: 20%;
+        float: left;
+    }
+}
 </style>
 
 ```{r setup, include=FALSE}
@@ -186,7 +220,6 @@ example.world <- matrix(c( 1, 0, 3, 3, 0, 0,-1,
 example.world
 ```
 
-
 If you want to rebuild a world given some adaptive samples:
 
 Think of a world like a game of minesweeper.
@@ -224,7 +257,11 @@ figure10.2[,2]  <- c(0,0,0,2,6,0,0,0,0,0)
 figure10.2[,1]  <- c(0,4,0,4,0,0,2,3,0,0)
 ```
 
-In order to navigate this worlds we first need to know a couple of definitions
+This world is represented as a Matrix in memory.
+
+In order to navigate this world and take an adpative sample this data structure will have to be reshaped in order to analyze its contents.
+
+To understand the analysis some definitions of functions and parts of the algorithm used to take the adaptive sample need to be known.
 
 </div>
 
@@ -237,71 +274,70 @@ plotly.adjmatrix(figure10.2,"Figure 10.2")
 
 ## Definition 1: "Adjacency List"
 
-"In graph theory and computer science and adjacency list is a collection of unordered lists used to represent a finite graph.  Each list represents the set of neighbors of a vertex of a graph"
+"An adjacency list is a collection of unordered lists used to represent a finite graph.  Each list represents the set of neighbors of a vertex of a graph"
 
-1. Represent the matrix as a graph where each cell of the matrix is the vertex on a graph.
+Step 1. Represent the matrix as a graph where each cell of the matrix is a vertex on a graph.
 
 Three functions created 
 
-Adjlist function -> give it a world as a matrix object, gives you back and adjacency list
+Adjlist function:
 
-getEdges function -> give it a world as a matrix object, returns an adjacency list that the igraph package can use to create a graph
+  - Given a world as a matrix object:
+        
+    - Return the full adjacency list for every node of that matrix as if it were a graph
+        
+Adjlist.adaptive functiion:
 
-Adjlist.adaptive function -> given a world as a matrix object returns the adjacency list for a world that obeys the rules of an adaptive sampling grid
+  - Given a world as a matrix object
+    
+    - Return the adjacency list for a world that obeys the rules of an adaptive sampling grid
+
+      - ie: In order for a vertex to have any other verticies in its adjacency list it must have a non zero value
+        
+getEdges function:
+
+  - Given a world as a matrix object as well as a boolean for Adaptive Or Not
+    
+      - Returns an adjacency list that the igraph package can use inorder to plot a graph
 
 ## How to generate the Adjlist:
 
 <div class="column-left">
-
-Core idea:
-
-"column" up and down
-
-"row" left and right
-
-"%%" modulo, finds the remainder in a division
-
 ```{}
 for each index "i" of the matrix:
     - Is "i" in the Top Row?
-          "is top" - i > (nrow * ncol) - ncol
     - Is "i" in the Bottom Row?
-          "is bottom" - i <= ncol
     - Is "i" in the Leftmost column?
-          "is left" - (i - 1) %% ncol == 0
     - Is "i" in the Rightmost Column?
-          - i %% ncol == 0
-          
-    if (I'm not Leftmost column)
-    left <- i - 1
+
+    if (Not in Leftmost column)
+      left <- i - 1
     
-    if (I'm not in the Leftmost column or Topmost row)
-    upleft <- i - 1 + ncol
+    if (Not in the Leftmost column or Topmost row)
+      upleft <- i - 1 + ncol
     
-    if (I'm not in the Topmost Row)
-    up <- i + ncol
+    if (Not in the Topmost Row)
+      up <- i + ncol
     
-    if (I'm not in the Topmost row or Rightmost column)
-    upright <- i + 1 + ncol
+    if (Not in the Topmost row or Rightmost column)
+      upright <- i + 1 + ncol
     
-    if (I'm not in the Rightmost column)
-    right <- i + 1
+    if (Not in the Rightmost column)
+      right <- i + 1
     
-    if (I'm not in the Bottommost row or the Rightmost column)
-    downright <- i + 1 - ncol
+    if (Not in the Bottommost row or the Rightmost column)
+      downright <- i + 1 - ncol
     
-    if (I'm not in the Bottommost row)
-    down <- i - ncol
+    if (Not in the Bottommost row)
+      down <- i - ncol
 ```
 </div>
 
 <div class="column-right">
 
-plotly!, mouse over graphs for more information!
+all graphs use Plotly mouse over a vertex in the graph for more information
 
 ```{r}
-sprintf("ncol: %d",ncol(figure10.2))
-sprintf("nrow: %d",nrow(figure10.2))
 plotly.adjmatrix.id(figure10.2, "Figure 10.2")
 ```
 </div>
@@ -441,10 +477,13 @@ adjlist.adaptive <- function(world){
 plotly.adjmatrix.id(figure10.2, "Figure 10.2")
 ```
 
-```{r, echo =  TRUE}
+```{r}
 figure10.2.adjlist <- adjlist(figure10.2)
-figure10.2.adjlist
 ```
+
+A matrix where each cell is the vertex of a graph and all vertecies of this graph are fully connected to each of their neighbors
+
+ie: Any vertex to the NE, N, NW, W, SW, S, SE, E is connected
 
 </div>
 
@@ -464,16 +503,17 @@ getEdges <- function(world,adaptive){
   }
   edge.list
 }
-
 ```
 
 <div class="column-right">
 
-```{r, echo = TRUE}
+```{r}
 g1 <- graph(edges = rev(getEdges(figure10.2,FALSE)), 
             directed = F, n = 100)
 plot(g1, layout=layout_on_grid)
 ```
+
+The edges of this world
 
 </div>
 
@@ -486,24 +526,27 @@ plot(g1, layout=layout_on_grid)
 plotly.adjmatrix(figure10.2, "Figure 10.2")
 ```
 
-```{r, echo = TRUE}
+```{r}
 figure10.2.adj <- adjlist.adaptive(figure10.2)
-figure10.2.adj
 ```
 
 </div>
 <div class="column-right">
-```{r, echo = TRUE}
+
+```{r}
 g2 <- graph(edges = rev(getEdges(figure10.2,TRUE)), 
             directed = F, n = 100)
 plot(g2, layout=layout_on_grid)
 ```
+
+What the world looks like when edges are only allowed between vertices with non 0 values
+
 </div>
 
-## Compare the differences in the adjacency list
+## Compare the differences in the adjacency lists
 
 <div class="column-left">
-```{r,echo = TRUE}
+```{r}
 g1 <- graph(edges = rev(getEdges(figure10.2,FALSE)), 
             directed = F, n = 100)
 plot(g1, layout=layout_on_grid)
@@ -513,14 +556,15 @@ plot(g1, layout=layout_on_grid)
 plotly.adjmatrix.id(figure10.2,"Figure 10.2")
 ```
 
-```{r}
+Full adjaceny list:
+```{r, echo = TRUE}
 adjlist(figure10.2)
 ```
 
 </div>
 
 <div class="column-right">
-```{r, echo = TRUE}
+```{r}
 g2 <- graph(edges = rev(getEdges(figure10.2,TRUE)), 
             directed = F, n = 100)
 plot(g2, layout=layout_on_grid)
@@ -530,22 +574,23 @@ plot(g2, layout=layout_on_grid)
 plotly.adjmatrix(figure10.2,"Figure 10.2")
 ```
 
-```{r}
+Full Adaptive sampling Adjacency list:
+```{r, echo = TRUE}
 adjlist.adaptive(figure10.2)
 ```
 </div>
 
-
-
 ## Definition 2: "Queue"
 
-A Queue is essentially a fancy vector
+"In computer science, a queue is a particular kind of abstract data type or collection in which the entities in the collection are kept in order and the principal (or only) operations on the collection are the addition of entities to the rear terminal position, known as enqueue, and removal of entities from the front terminal position, known as dequeue. This makes the queue a First-In-First-Out (FIFO) data structure. In a FIFO data structure, the first element added to the queue will be the first one to be removed." -- Wikipedia
 
-Add things to the back of the Queue ("push")
+```{}
+## Queue$Push() <- "Enqueue" push to the back of the Queue
+## Queue$Pop() <- "Dequeue", remove the first element in the Queue
+## Queue$Empty() <- returns Queue$size() == 0
+```
 
-Remove things from the front of the Queue ("dequeue")
-
-```{r, echo = TRUE}
+```{r}
 Queue <- setRefClass(Class = "Queue",
                      fields = list(
                        name = "character",
@@ -584,10 +629,24 @@ Queue <- setRefClass(Class = "Queue",
 )
 ```
 
-## How do we actually take the sample?
+Adapted from https://github.com/DataWookie/liqueueR/blob/master/R/queue.R
 
-Graph theory & computer science to the rescue!
+## How is a sample taken?
 
+From the definition of an adaptive sample:
+
+"..But suppose that these trees tend to occur in clusters so that if you see one tree in a cell then you are likely to see other trees in nearby cells. Why not visit these neighboring cells while in the other?..""
+
+The world is now represented as a graph w/ an adjancy list for each vertex which contains only the neighbors that also have non zero values
+
+For any given source vertex "s", the selected vertex to start an adaptive sample from traverse the graph and find all of the vertices connected to "s"
+
+
+## Alorithm to obtain this:
+
+<div class="column-left">
+
+Breadth First Search (BFS) on "s" using using the adjacency list generated from the adjlist.adaptive function:
 ```{}
 Algorithm: Breadth First Search (BFS)
 - BFS (V,E,s) {
@@ -607,6 +666,8 @@ Algorithm: Breadth First Search (BFS)
 - }
 ```
 
+</div>
+<div class="column-right">
 - "V" the vertices of the graph
 
 - "E" the adjlist for that graph
@@ -617,7 +678,14 @@ Algorithm: Breadth First Search (BFS)
 
 - "u" some vertex either adjacent to s or s itself, or adjacent to a vertex adjacent to s etc.
 
-## BFS ("Adaptive Sampling")
+The BFS will hit the neighbors of neighbors of "s" which  have non zero values.
+
+</div>
+
+<div class="column-center">
+After the BFS any vertex connected to the source vertex "s" will have a distance != infinity
+</div>
+## BFS ("Adaptive Sampling") in R
 
 ```{r, echo = TRUE}
 BFS <- function(V,G.adj,s){
@@ -647,7 +715,9 @@ BFS <- function(V,G.adj,s){
   return(list("adaptive.sample" = data.frame("y" = sum(V[d != -1]),"m" = length(d[d != -1])),
               "sampled.squares" = data.frame("id" = id, "yi" = V[id]), 
               "d" = matrix(d, nrow = nrow(V), ncol=ncol(V)), 
-              "p" = matrix(p, nrow = nrow(V), ncol=ncol(V))))
+              "p" = matrix(p, nrow = nrow(V), ncol=ncol(V))
+              )
+         )
 }
 ```
 
@@ -721,7 +791,7 @@ Most cells are their own parent except for the ones that were visted through BFS
 
 ## On a lonely node:
 
-$s = 97$
+$S = 97$
 
 <div class="column-left">
 
@@ -730,9 +800,7 @@ BFS.results <- BFS(figure10.2,adjlist.adaptive(figure10.2),97)
 plotly.distance(figure10.2,BFS.results$d,97)
 ```
 
-All of the visited squares have a value != -1 (infinity)
-
-The value of $-1$ means that there is an "infinite distance" between the two vertices, aka we cannot get there from where we are
+The value of $-1$ means that there is an "infinite distance" between the two vertices, aka we cannot get there from where we are so these were not sampled for the adaptive sample on "s"
 
 </div>
 <div class="column-right">
@@ -746,9 +814,7 @@ Most cells are their own parent including 97 because BFS did not visit any where
 
 <div class="column-left">
 
-```{r}
-plotly.adjmatrix(figure10.2, "Figure 10.2")
-```
+The adaptive sample Function:
 
 ```{r, echo = TRUE}
 adaptive.sample <- function(world, vertecies){
@@ -759,66 +825,29 @@ adaptive.sample <- function(world, vertecies){
   }
   return(samples)
 }
+
 adaptive.sample.figure10.2 <- adaptive.sample(figure10.2, 
                                               c(97,83,56,44,39))
 adaptive.sample.figure10.2
-
-adaptive.sample.confint.fun(adaptive.sample.figure10.2$y,
-                            adaptive.sample.figure10.2$m,
-                            nrow(adaptive.sample.figure10.2),
-                            nrow(figure10.2)*ncol(figure10.2)
-                            )[c("mu.hat","v.mu","lower","upper")]
 ```
+
 </div>
 
 <div class="column-right">
-
-Each individual BFS:
-
-```{r, echo = TRUE}
-bfs.97 <- BFS(figure10.2,figure10.2.adj,97)
-bfs.97$adaptive.sample
-bfs.97$sampled.squares
-
-bfs.83 <- BFS(figure10.2,figure10.2.adj,83)
-bfs.83$adaptive.sample
-bfs.83$sampled.squares
-
-bfs.56 <- BFS(figure10.2,figure10.2.adj,56)
-bfs.56$adaptive.sample
-bfs.56$sampled.squares
-
-bfs.44 <- BFS(figure10.2,figure10.2.adj,44)
-bfs.44$adaptive.sample
-bfs.44$sampled.squares
-
-bfs.29 <- BFS(figure10.2,figure10.2.adj,29)
-bfs.29$adaptive.sample
-bfs.29$sampled.squares
-```
-</div>
-
-## The sampled squares:
-
-<div class="column-left">
 ```{r}
-sampled.squares <- rbind(
-  cbind(bfs.97$sampled.squares,"BFS" = 1),
-  cbind(bfs.83$sampled.squares,"BFS" = 2),
-  cbind(bfs.56$sampled.squares,"BFS" = 3),
-  cbind(bfs.44$sampled.squares,"BFS" = 4),
-  cbind(bfs.29$sampled.squares,"BFS" = 5))
-sampled.squares
-```
-</div>
-<div class = "column-right">
-```{r}
-figure10.2.sampled.squares <- rbind(
-  cbind(bfs.97$sampled.squares,"BFS" = 1),
-  cbind(bfs.83$sampled.squares,"BFS" = 2),
-  cbind(bfs.56$sampled.squares,"BFS" = 3),
-  cbind(bfs.44$sampled.squares,"BFS" = 4),
-  cbind(bfs.29$sampled.squares,"BFS" = 5))
+
+get.sampled.squares <- function(world,to.sample){
+  sampled.squares <- data.frame()
+  world.adj <- adjlist.adaptive(world)
+  for(i in c(1:length(to.sample))) {
+   bfs <- BFS(world,world.adj,to.sample[i]) 
+   a <- cbind(bfs$sampled.squares,"BFS" = i)
+   sampled.squares <- rbind(sampled.squares,a)
+  }
+  return(sampled.squares)
+}
+
+sampled.squares <- get.sampled.squares(figure10.2, c(97,83,56,44,39))
 
 plotly.sampled <- function(world,sampled.squares,name){
   cols = rainbow(100, s=.6, v=.9)[sample(1:100,100)]
@@ -845,9 +874,44 @@ plotly.sampled <- function(world,sampled.squares,name){
 }
 plotly.sampled(figure10.2,sampled.squares,"Figure 10.2")
 ```
+
+```{r}
+adaptive.sample.confint.fun(adaptive.sample.figure10.2$y,
+                            adaptive.sample.figure10.2$m,
+                            nrow(adaptive.sample.figure10.2),
+                            nrow(figure10.2)*ncol(figure10.2)
+                            )[c("mu.hat","v.mu","lower","upper")]
+
+```
+
 </div>
 
-## Adaptive sample on some random graph:
+## Each individual BFS:
+```{r, echo = TRUE}
+bfs.97 <- BFS(figure10.2,figure10.2.adj,97)
+bfs.83 <- BFS(figure10.2,figure10.2.adj,83)
+bfs.56 <- BFS(figure10.2,figure10.2.adj,56)
+bfs.44 <- BFS(figure10.2,figure10.2.adj,44)
+bfs.29 <- BFS(figure10.2,figure10.2.adj,29)
+
+bfs.97$adaptive.sample
+bfs.97$sampled.squares
+
+bfs.83$adaptive.sample
+bfs.83$sampled.squares
+
+bfs.56$adaptive.sample
+bfs.56$sampled.squares
+
+bfs.44$adaptive.sample
+bfs.44$sampled.squares
+
+bfs.29$adaptive.sample
+bfs.29$sampled.squares
+```
+
+  
+## Adaptive sample on a randomly generated graph:
 
 <div class="column-left">
 ```{r, echo = TRUE}
@@ -874,22 +938,12 @@ adaptive.sample(world.15.30,interesting.squares)
 ```
 
 ```{r,echo = FALSE}
-get.sampled.squares <- function(world,to.sample){
-  sampled.squares <- data.frame()
-  world.adj <- adjlist.adaptive(world)
-  for(i in c(1:length(to.sample))) {
-   bfs <- BFS(world,world.adj,to.sample[i]) 
-   a <- cbind(bfs$sampled.squares,"BFS" = i)
-   sampled.squares <- rbind(sampled.squares,a)
-  }
-  return(sampled.squares)
-}
 sampled.squares <- get.sampled.squares(world.15.30,interesting.squares)
 plotly.sampled(world.15.30,sampled.squares,"world")
 ```
 </div>
 
-## lets get really random
+## Example on a much larger world
 <div class="column-left">
 ```{r, echo = TRUE}
 set.seed(NULL) ## randomize the seed again
@@ -964,3 +1018,5 @@ adaptive.sample.confint.fun(adaptive.samples$y,
 - Questions?
 
 ashaffer7@mail.csuchico.edu
+
+Full code: https://github.com/ClassicSours/AdaptiveSampingInR
