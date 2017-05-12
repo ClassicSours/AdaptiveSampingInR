@@ -949,6 +949,7 @@ plotly.sampled(world.15.30,sampled.squares,"world")
 set.seed(NULL) ## randomize the seed again
 nrow <- sample(50:100,1)
 ncol <- sample(50:100,1)
+
 world <- matrix(sample(c(rep(0,25),c(1:10)),nrow*ncol,replace = TRUE),
                 nrow = nrow,ncol = ncol,byrow=TRUE)
 ```
